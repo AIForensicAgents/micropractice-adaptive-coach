@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>MicroPractice Adaptive Coach</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { font-family: 'Inter', sans-serif; }
+body { background: #FFF8F0; }
+.pulse-ring {
+  animation: pulseRing 2s ease-in-out infinite;
+}
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+.breathe-circle {
+  transition: all 1s ease-in-out;
+}
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.slide-up {
+  animation: slideUp 0.4s ease-out;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.progress-fill {
+  transition: width 0.8s ease;
+}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: #D4A574; border-radius: 3px; }
+.btn-primary {
+  background: linear-gradient(135deg, #8B6F47, #A0845C);
+  min-height: 56px;
+  font-size: 1.125rem;
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, #7A5F3A, #8B6F47);
+}
+.btn-secondary {
+  min-height: 52px;
+  font-size: 1rem;
+}
+.card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(139,111,71,0.08);
+}
+.timer-display {
+  font-variant-numeric: tabular-nums;
+}
+.practice-option {
+  transition: all 0.2s ease;
+  min-height: 70px;
+}
+.practice-option:active {
+  transform: scale(0.97);
+}
+.modal-overlay {
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px);
+}
+</style>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        warm: { 50:'#FFF8F0', 100:'#FFEFD5', 200:'#F5DEB3', 300:'#D4A574', 400:'#C4956A', 500:'#8B6F47', 600:'#7A5F3A', 700:'#5C4A2E', 800:'#3E3220', 900:'#2C2418' },
+        calm: { 100:'#E8F4F8', 200:'#B8D8E8', 300:'#7FB8D0', 400:'#5A9CB8', 500:'#3D7A96' },
+        sage: { 100:'#EFF5EE', 200:'#D4E6D1', 300:'#A8CCA3', 400:'#7DB375', 500:'#5A8F52' }
+      }
+    }
+  }
+}
+</script>
+</head>
+<body class="min-h-screen bg-warm-50 text-warm-800">
+
+<div id="app" class="max-w-lg mx-auto pb-24">
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-warm-50/95 backdrop-blur-sm px-4 pt-4 pb-2">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-3xl">🧘</span>
+        <div>
+          <h1 class="text-xl font-bold text-warm-700 leading-tight">MicroPractice</h1>
+          <p class="text-xs text-warm-400 font-medium">Adaptive Coach</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="showScreen('stats')" class="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-warm-100" aria-label="Stats">
+          <span class="text-lg">📊</span>
+        </button>
+        <button onclick="showScreen('settings')" class="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-warm-100" aria-label="Settings">
+          <span class="text-lg">⚙️</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Onboarding Screen -->
+  <div id="screen-onboarding" class="px-4 py-6 hidden">
+    <div class="card p-6 text-center fade-in">
+      <span class="text-6xl block mb-4">🌸</span>
+      <h2 class="text-2xl font-bold text-warm-700 mb-2">Welcome, Friend</h2>
+      <p class="text-warm-500 text-lg mb-6 leading-relaxed">Let's set up your personalized mindfulness practice. Just a few quick questions to help me understand you better.</p>
+      
+      <div id="onboard-step-1" class="space-y-4">
+        <label class="block text-left text-warm-600 font-medium text-lg mb-1">What's your name? 😊</label>
+        <input id="onboard-name" type="text" placeholder="e.g., Margaret" class="w-full px-4 py-4 rounded-xl border-2 border-warm-200 focus:border-warm-400 focus:outline-none text-lg bg-warm-50">
+        
+        <label class="block text-left text-warm-600 font-medium text-lg mt-4 mb-2">How do you usually sit or rest?</label>
+        <div class="grid grid-cols-1 gap-3">
+          <button onclick="selectMobility('seated')" class="practice-option px-4 py-4 rounded-xl border-2 border-warm-200 text-left flex items-center gap-3 hover:border-warm-400 bg-white" data-mob="seated">
+            <span class="text-2xl">🪑</span>
+            <div><span class="font-medium text-warm-700">Seated in a chair</span><br><span class="text-sm text-warm-400">I sit comfortably most of the day</span></div>
+          </button>
+          <button onclick="selectMobility('wheelchair')" class="practice-option px-4 py-4 rounded-xl border-2 border-warm-200 text-left flex items-center gap-3 hover:border-warm-400 bg-white" data-mob="wheelchair">
+            <span class="text-2xl">♿</span>
+            <div><span class="font-medium text-warm-700">Wheelchair</span><br><span class="text-sm text-warm-400">I use a wheelchair regularly</span></div>
+          </button>
+          <button onclick="selectMobility('bed')" class="practice-option px-4 py-4 rounded-xl border-2 border-warm-200 text-left flex items-center gap-3 hover:border-warm-400 bg-white" data-mob="bed">
+            <span class="text-2xl">🛏️</span>
+            <div><span class="font-medium text-warm-700">Mostly lying down</span><br><span class="text-sm text-warm-400">I spend most time in bed</span></div>
+          </button>
+          <button onclick="selectMobility('mobile')" class="practice-option px-4 py-4 rounded-xl border-2 border-warm-200 text-left flex items-center gap-3 hover:border-warm-400 bg-white" data-mob="mobile">
+            <span class="text-2xl">🚶</span>
+            <div><span class="font-medium text-warm-700">I can walk around</span><br><span class="text-sm text-warm-400">I move fairly well</span></div>
+          </button>
+        </div>
+
+        <label class="block text-left text-warm-600 font-medium text-lg mt-4 mb-2">Preferred practice length?</label>
+        <div class="grid grid-cols-3 gap-3">
+          <button onclick="selectDuration('30s')" class="py-4 rounded-xl border-2 border-warm-200 text-center hover:border-warm-400 bg-white font-medium text-warm-600" data-dur="30s">30 sec</button>
+          <button onclick="selectDuration('1min')" class="py-4 rounded-xl border-2 border-warm-200 text-center hover:border-warm-400 bg-white font-medium text-warm-600" data-dur="1min">1 min</button>
+          <button onclick="selectDuration('2min')" class="py-4 rounded-xl border-2 border-warm-200 text-center hover:border-warm-400 bg-white font-medium text-warm-600" data-dur="2min">2 min</button>
+          <button onclick="selectDuration('3min')" class="py-4 rounded-xl border-2 border-warm-200 text-center hover:border-warm-400 bg-white font-medium text-warm-600" data-dur="3min">3 min</button>
+          <button onclick="selectDuration('5min')" class="py-4 rounded-xl border-2 border-warm-200 text-center hover:border-warm-400 bg-white font-medium text-warm-600" data-dur="5min">5 min</button>
+          <button onclick="selectDuration('auto')" class="py-4 rounded-xl border-2 border-warm-200 text-center hover:border-warm-400 bg-white font-medium text-warm-600" data-dur="auto">Auto ✨</button>
+        </div>
+
+        <button onclick="completeOnboarding()" class="btn-primary w-full text-white font-semibold rounded-xl mt-6 shadow-lg">
+          Start My Journey 🌟
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Home Screen -->
+  <div id="screen-home" class="px-4 py-4 hidden">
+    <!-- Greeting -->
+    <div class="fade-in mb-4">
+      <h2 id="greeting" class="text-2xl font-bold text-warm-700"></h2>
+      <p id="greeting-sub" class="text-warm-400 text-base mt-1"></p>
+    </div>
+
+    <!-- Streak & Stats Bar -->
+    <div class="card p-4 mb-4 flex items-center justify-between fade-in">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🔥</span>
+        <div>
+          <p class="font-bold text-warm-700 text-lg" id="streak-count">0</p>
+          <p class="text-xs text-warm-400">Day Streak</p>
+        </div>
+      </div>
+      <div class="h-8 w-px bg-warm-200"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">⏱️</span>
+        <div>
+          <p class="font-bold text-warm-700 text-lg" id="total-minutes">0</p>
+          <p class="text-xs text-warm-400">Total Minutes</p>
+        </div>
+      </div>
+      <div class="h-8 w-px bg-warm-200"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">✅</span>
+        <div>
+          <p class="font-bold text-warm-700 text-lg" id="total-sessions">0</p>
+          <p class="text-xs text-warm-400">Sessions</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Check-in -->
+    <div class="card p-5 mb-4 slide-up">
+      <h3 class="font-semibold text-warm-600 text-lg mb-3">How are you feeling right now? 💭</h3>
+      <div class="grid grid-cols-5 gap-2 mb-4">
+        <button onclick="setMood('anxious')" class="mood-btn flex flex-col items-center py-3 rounded-xl border-2 border-warm-100 hover:border-warm-300 bg-warm-50" data-mood="anxious">
+          <span class="text-2xl">😟</span>
+          <span class="text-xs mt-1 text-warm-500">Anxious</span>
+        </button>
+        <button onclick="setMood('tired')" class="mood-btn flex flex-col items-center py-3 rounded-xl border-2 border-warm-100 hover:border-warm-300 bg-warm-50" data-mood="tired">
+          <span class="text-2xl">😴</span>
+          <span class="text-xs mt-1 text-warm-500">Tired</span>
+        </button>
+        <button onclick="setMood('okay')" class="mood-btn flex flex-col items-center py-3 rounded-xl border-2 border-warm-100 hover:border-warm-300 bg-warm-50" data-mood="okay">
+          <span class="text-2xl">😐</span>
+          <span class="text-xs mt-1 text-warm-500">Okay</span>
+        </button>
+        <button onclick="setMood('good')" class="mood-btn flex flex-col items-center py-3 rounded-xl border-2 border-warm-100 hover:border-warm-300 bg-warm-50" data-mood="good">
+          <span class="text-2xl">😊</span>
+          <span class="text-xs mt-1 text-warm-500">Good</span>
+        </button>
+        <button onclick="setMood('great')" class="mood-btn flex flex-col items-center py-3 rounded-xl border-2 border-warm-100 hover:border-warm-300 bg-warm-50" data-mood="great">
+          <span class="text-2xl">🥰</span>
+          <span class="text-xs mt-1 text-warm-500">Great</span>
+        </button>
+      </div>
+      
+      <div id="energy-section" class="mb-4">
+        <label class="text-warm-600 font-medium text-base mb-2 block">Energy level today?</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button onclick="setEnergy('low')" class="energy-btn py-3 rounded-xl border-2 border-warm-100 hover:border-warm-300 bg-warm-50 text-warm-600 font-medium" data-energy="low">🔋 Low</button>
+          <button onclick="setEnergy('medium')" class="energy-btn py-3 rounded-xl border-2 border-warm-100 hover:border-warm-300 bg-warm-50 text-warm-600 font-medium" data-energy="medium">🔋 Medium</button>
+          <button onclick="setEnergy('high')" class="energy-btn py-3 rounded-xl border-2 border-warm-100 hover:border-warm-300 bg-warm-50 text-warm-600 font-medium" data-energy="high">🔋 High</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Recommended Practice -->
+    <div id="recommendation-card" class="card p-5 mb-4 border-2 border-sage-200 bg-sage-100/30 hidden slide-up">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-2xl pulse-ring inline-block">✨</span>
+        <h3 class="font-bold text-sage-500 text-lg">Recommended For You</h3>
+      </div>
+      <div id="rec-content" class="space-y-2">
+        <p id="rec-title" class="font-semibold text-warm-700 text-xl"></p>
+        <p id="rec-desc" class="text-warm-500 text-base leading-relaxed"></p>
+        <div class="flex items-center gap-3 mt-2">
+          <span id="rec-duration" class="bg-warm-200 text-warm-700 px-3 py-1 rounded-full text-sm font-medium"></span>
+          <span id="rec-position" class="bg-calm-100 text-calm-500 px-3 py-1 rounded-full text-sm font-medium"></span>
+        </div>
+      </div>
+      <button onclick="startRecommendedPractice()" class="btn-primary w-full text-white font-semibold rounded-xl mt-4 shadow-lg flex items-center justify-center gap-2">
+        <span class="text-xl">▶️</span> Begin Practice
+      </button>
+    </div>
+
+    <!-- Loading indicator for recommendation -->
+    <div id="rec-loading" class="card p-5 mb-4 text-center hidden">
+      <div class="animate-pulse">
+        <span class="text-4xl block mb-2">🌿</span>
+        <p class="text-warm-500 font-medium">Finding the perfect practice for you...</p>
+      </div>
+    </div>
+
+    <!-- Browse Practices -->
+    <div class="mb-4 slide-up">
+      <h3 class="font-semibold text-warm-600 text-lg mb-3">Or Choose a Practice 📋</h3>
+      <div class="space-y-3" id="practice-list">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+
+    <!-- Chat with Coach -->
+    <div class="card p-5 mb-4 slide-up">
+      <h3 class="font-semibold text-warm-600 text-lg mb-3">💬 Talk to Your Coach</h3>
+      <p class="text-warm-400 text-sm mb-3">Ask anything about mindfulness, or share how you're doing.</p>
+      <button onclick="showScreen('chat')" class="btn-secondary w-full bg-calm-100 text-calm-500 font-semibold rounded-xl border-2 border-calm-200 flex items-center justify-center gap-2">
+        <span>💬</span> Open Chat
+      </button>
+    </div>
+  </div>
+
+  <!-- Practice Session Screen -->
+  <div id="screen-practice" class="px-4 py-6 hidden">
+    <button onclick="confirmEndPractice()" class="text-warm-400 mb-4 flex items-center gap-1 text-lg font-medium">← Back</button>
+    
+    <div class="text-center fade-in">
+      <h2 id="practice-title" class="text-2xl font-bold text-warm-700 mb-2"></h2>
+      <p id="practice-position-badge" class="inline-block bg-warm-100 text-warm-500 px-3 py-1 rounded-full text-sm font-medium mb-6"></p>
+      
+      <!-- Timer Circle -->
+      <div class="relative w-56 h-56 mx-auto mb-6">
+        <svg class="w-full h-full -rotate-90" viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="90" fill="none" stroke="#F5DEB3" stroke-width="8"/>
+          <circle id="timer-progress" cx="100" cy="100" r="90" fill="none" stroke="#8B6F47" stroke-width="8" stroke-linecap="round" stroke-dasharray="565.48" stroke-dashoffset="0" class="transition-all duration-1000"/>
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <p id="timer-display" class="text-5xl font-bold text-warm-700 timer-display">0:00</p>
+          <p id="timer-phase" class="text-warm-400 text-sm mt-1"></p>
+        </div>
+      </div>
+
+      <!-- Breathing Visual -->
+      <div id="breath-visual" class="hidden mb-6">
+        <div id="breath-circle" class="breathe-circle w-24 h-24 mx-auto rounded-full bg-calm-200/60 flex items-center justify-center">
+          <span id="breath-text" class="text-calm-500 font-semibold text-lg">Breathe</span>
+        </div>
+      </div>
+
+      <!-- Current Instruction -->
+      <div class="card p-5 mb-6 min-h-[100px] flex items-center justify-center">
+        <p id="practice-instruction" class="text-warm-600 text-xl leading-relaxed font-medium"></p>
+      </div>
+
+      <!-- Controls -->
+      <div class="flex items-center justify-center gap-4">
+        <button id="btn-pause" onclick="togglePause()" class="w-16 h-16 rounded-full bg-warm-200 flex items-center justify-center text-2xl shadow-md active:scale-95">⏸️</button>
+        <button id="btn-stop" onclick="endPractice()" class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-2xl shadow-md active:scale-95">⏹️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Practice Complete Screen -->
+  <div id="screen-complete" class="px-4 py-6 hidden">
+    <div class="text-center fade-in">
+      <span class="text-7xl block mb-4">🎉</span>
+      <h2 class="text-3xl font-bold text-warm-700 mb-2">Well Done!</h2>
+      <p id="complete-name" class="text-warm-500 text-lg mb-4"></p>
+      
+      <div class="card p-5 mb-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-3xl font-bold text-sage-500" id="complete-duration">0:00</p>
+            <p class="text-warm-400 text-sm">Duration</p>
+          </div>
+          <div>
+            <p class="text-3xl font-bold text-calm-500" id="complete-type">—</p>
+            <p class="text-warm-400 text-sm">Practice</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-5 mb-4">
+        <h3 class="font-semibold text-warm-600 mb-3">How do you feel now? 🌈</h3>
+        <div class="grid grid-cols-5 gap-2">
+          <button onclick="setPostMood('worse')" class="post-mood-btn flex flex-col items-center py-3 rounded-xl border-2 border-warm-100 hover:border-warm-300" data-pm="worse"><span class="text-2xl">😢</span><span class="text-xs mt-1 text-warm-400">Worse</span></button>
+          <button onclick="setPostMood('same')" class="post-mood-btn flex flex-col items-center py-3 rounded-xl border-2 border-warm-100 hover:border-warm-300" data-pm="same"><span class="text-2xl">😐</span><span class="text-xs mt-1 text-warm-400">Same</span></button>
+          <button onclick="setPostMood('better')" class="post-mood-btn flex flex-col items-center py-3 rounded-xl border-2 border-warm-100 hover:border-warm-300" data-pm="better"><span class="text-2xl">🙂</span><span class="text-xs mt-1 text-warm-400">Better</span></button>
+          <button onclick="setPostMood('good')" class="post-mood-btn flex flex-col items-center py-3 rounded-xl border-2 border-warm-100 hover:border-warm-300" data-pm="good"><span class="text-2xl">😊</span><span class="text-xs mt-1 text-warm-400">Good</span></button>
+          <button onclick="setPostMood('wonderful')" class="post-mood-btn flex flex-col items-center py-3 rounded-xl border-2 border-warm-100 hover:border-warm-300" data-pm="wonderful"><span class="text-2xl">✨</span><span class="text-xs mt-1 text-warm-400">Wonderful</span></button>
+        </div>
+      </div>
+
+      <div id="ai-reflection" class="card p-5 mb-4 bg-sage-100/30 border border-sage-200 hidden">
+        <p id="ai-reflection-text" class="text-warm-600 text-base leading-relaxed italic"></p>
+      </div>
+
+      <button onclick="showScreen('home');updateHomeScreen()" class="btn-primary w-full text-white font-semibold rounded-xl shadow-lg">
+        Back to Home 🏠
+      </button>
+    </div>
+  </div>
+
+  <!-- Chat Screen -->
+  <div id="screen-chat" class="px-4 py-4 hidden flex flex-col" style="height: calc(100vh - 80px);">
+    <button onclick="showScreen('home')" class="text-warm-400 mb-3 flex items-center gap-1 text-lg font-medium flex-shrink-0">← Back</button>
+    <h2 class="text-xl font-bold text-warm-700 mb-3 flex-shrink-0">💬 Your Mindfulness Coach</h2>
+    
+    <div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 mb-3 pr-1">
+      <div class="flex gap-2">
+        <span class="text-2xl flex-shrink-0">🧘</span>
+        <div class="bg-warm-100 rounded-2xl rounded-tl-md px-4 py-3 max-w-[85%]">
+          <p class="text-warm-700 text-base">Hello! I'm your mindfulness coach. How can I help you today? You can ask me about breathing exercises, managing anxiety, sleep tips, or anything else on your mind. 💛</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="flex gap-2 flex-shrink-0 pb-2">
+      <input id="chat-input" type="text" placeholder="Type your message..." class="flex-1 px-4 py-4 rounded-xl border-2 border-warm-200 focus:border-warm-400 focus:outline-none text-lg bg-white" onkeypress="if(event.key==='Enter')sendChat()">
+      <button onclick="sendChat()" class="w-14 h-14 rounded-xl bg-warm-500 text-white flex items-center justify-center text-xl shadow-md active:scale-95">📤</button>
+    </div>
+  </div>
+
+  <!-- Stats Screen -->
+  <div id="screen-stats" class="px-4 py-4 hidden">
+    <button onclick="showScreen('home')" class="text-warm-400 mb-3 flex items-center gap-1 text-lg font-medium">← Back</button>
+    <h2 class="text-2xl font-bold text-warm-700 mb-4">📊 Your Progress</h2>
+    
+    <div class="card p-5 mb-4 fade-in">
+      <h3 class="font-semibold text-warm-600 mb-3">This Week</h3>
+      <div id="week-chart" class="flex items-end justify-between gap-1 h-32 mb-2">
+        <!-- Bars populated dynamically -->
+      </div>
+      <div class="flex justify-between text-xs text-warm-400">
+        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+      </div>
+    </div>
+
+    <div class="card p-5 mb-4 fade-in">
+      <h3 class="font-semibold text-warm-600 mb-3">All Time Stats</h3>
+      <div class="space-y-3">
+        <div class="flex justify-between"><span class="text-warm-500">Total sessions</span><span class="font-bold text-warm-700" id="stat-total-sessions">0</span></div>
+        <div class="flex justify-between"><span class="text-warm-500">Total minutes</span><span class="font-bold text-warm-700" id="stat-total-minutes">0</span></div>
+        <div class="flex justify-between"><span class="text-warm-500">Current streak</span><span class="font-bold text-warm-700" id="stat-streak">0 days</span></div>
+        <div class="flex justify-between"><span class="text-warm-500">Longest streak</span><span class="font-bold text-warm-700" id="stat-longest-streak">0 days</span></div>
+        <div class="flex justify-between"><span class="text-warm-500">Most common mood</span><span class="font-bold text-warm-700" id="stat-common-mood">—</span></div>
+      </div>
+    </div>
+
+    <div class="card p-5 mb-4 fade-in">
+      <h3 class="font-semibold text-warm-600 mb-3">Recent Sessions</h3>
+      <div id="recent-sessions" class="space-y-2 max-h-60 overflow-y-auto">
+        <p class="text-warm-400 text-sm">No sessions yet</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Screen -->
+  <div id="screen-settings" class="px-4 py-4 hidden">
+    <button onclick="showScreen('home')" class="text-warm-400 mb-3 flex items-center gap-1 text-lg font-medium">← Back</button>
+    <h2 class="text-2xl font-bold text-warm-700 mb-4">⚙️ Settings</h2>
+    
+    <div class="card p-5 mb-4 fade-in">
+      <label class="block text-warm-600 font-medium text-lg mb-2">Your Name</label>
+      <input id="settings-name" type="text" class="w-full px-4 py-3 rounded-xl border-2 border-warm-200 focus:border-warm-400 focus:outline-none text-lg bg-warm-50" onchange="saveSettings()">
+    </div>
+
+    <div class="card p-5 mb-4 fade-in">
+      <label class="block text-warm-600 font-medium text-lg mb-2">Mobility</label>
+      <select id="settings-mobility" class="w-full px-4 py-3 rounded-xl border-2 border-warm-200 focus:border-warm-400 focus:outline-none text-lg bg-warm-50" onchange="saveSettings()">
+        <option value="seated">🪑 Seated in chair</option>
+        <option value="wheelchair">♿ Wheelchair</option>
+        <option value="bed">🛏️ Mostly lying down</option>
+        <option value="mobile">🚶 Can walk around</option>
+      </select>
+    </div>
+
+    <div class="card p-5 mb-4 fade-in">
+      <label class="block text-warm-600 font-medium text-lg mb-2">Preferred Duration</label>
+      <select id="settings-duration" class="w-full px-4 py-3 rounded-xl border-2 border-warm-200 focus:border-warm-400 focus:outline-none text-lg bg-warm-50" onchange="saveSettings()">
+        <option value="30s">30 seconds</option>
+        <option value="1min">1 minute</option>
+        <option value="2min">2 minutes</option>
+        <option value="3min">3 minutes</option>
+        <option value="5min">5 minutes</option>
+        <option value="auto">Auto (AI picks)</option>
+      </select>
+    </div>
+
+    <div class="card p-5 mb-4 fade-in">
+      <label class="block text-warm-600 font-medium text-lg mb-2">Voice Guidance</label>
+      <div class="flex items-center gap-3">
+        <button onclick="toggleVoice()" id="voice-toggle" class="w-14 h-8 rounded-full bg-sage-300 relative transition-colors">
+          <div id="voice-toggle-knob" class="w-6 h-6 rounded-full bg-white shadow absolute top-1 left-7 transition-all"></div>
+        </button>
+        <span class="text-warm-500" id="voice-label">On</span>
+      </div>
+    </div>
+
+    <div class="card p-5 mb-4 fade-in">
+      <label class="block text-warm-600 font-medium text-lg mb-2">Text Size</label>
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="setTextSize('normal')" class="py-3 rounded-xl border-2 border-warm-200 text-warm-600 font-medium hover:border-warm-400 text-sm" id="ts-normal">Normal</button>
+        <button onclick="setTextSize('large')" class="py-3 rounded-xl border-2 border-warm-200 text-warm-600 font-medium hover:border-warm-400 text-base" id="ts-large">Large</button>
+        <button onclick="setTextSize('xlarge')" class="py-3 rounded-xl border-2 border-warm-200 text-warm-600 font-medium hover:border-warm-400 text-lg" id="ts-xlarge">X-Large</button>
+      </div>
+    </div>
+
+    <button onclick="resetApp()" class="w-full py-4 rounded-xl border-2 border-red-200 text-red-400 font-medium mt-4">Reset All Data</button>
+  </div>
+</div>
+
+<script>
+// Global AI metrics
+window.aiTotalInputTokens = 0;
+window.aiTotalOutputTokens = 0;
+window.aiTotalTime = 0;
+window.aiTimeByAlias = {};
+
+// App State
+let state = {
+  name: '',
+  mobility: 'seated',
+  preferredDuration: '2min',
+  voiceEnabled: true,
+  textSize: 'normal',
+  currentMood: null,
+  currentEnergy: null,
+  sessions: [],
+  streak: 0,
+  longestStreak: 0,
+  lastPracticeDate: null,
+  onboarded: false,
+  chatHistory: []
+};
+
+let currentPractice = null;
+let timerInterval = null;
+let timerSeconds = 0;
+let timerTotal = 0;
+let isPaused = false;
+let practiceInstructions = [];
+let currentInstructionIndex = 0;
+let breathInterval = null;
+let recommendedPractice = null;
+
+// Utility
+function loadState() {
+  const saved = localStorage.getItem('micropractice_state');
+  if (saved) {
+    try { state = { ...state, ...JSON.parse(saved) }; } catch(e) {}
+  }
+}
+
+function saveState() {
+  localStorage.setItem('micropractice_state', JSON.stringify(state));
+}
+
+function showScreen(name) {
+  document.querySelectorAll('[id^="screen-"]').forEach(el => el.classList.add('hidden'));
+  const screen = document.getElementById(`screen-${name}`);
+  if (screen) screen.classList.remove('hidden');
+  if (name === 'stats') updateStats();
+  if (name === 'settings') loadSettings();
+}
+
+function getTimeOfDay() {
+  const h = new Date().getHours();
+  if (h < 6) return 'night';
+  if (h < 12) return 'morning';
+  if (h < 17) return 'afternoon';
+  if (h < 21) return 'evening';
+  return 'night';
+}
+
+function getDurationSeconds(dur) {
+  const map = { '30s': 30, '1min': 60, '2min': 120, '3min': 180, '5min': 300, 'auto': 120 };
+  return map[dur] || 120;
+}
+
+function formatTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// AI Call Helper
+async function callAI(prompt, retries = 3) {
+  const start = Date.now();
+  for (let i = 0; i < retries; i++) {
+    try {
+      const resp = await fetch('https://16504442930.work/run_prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          alias: 'genericAI',
+          params: { prompt }
+        })
+      });
+      if (!resp.ok) {
+        const text = await resp.text();
+        if (i === retries - 1) {
+          // Format error with AI
+          try {
+            const errResp = await fetch('https://16504442930.work/run_prompt', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                alias: 'genericAI',
+                params: { prompt: `Reformat this error message to be user-friendly and helpful. Include the full response. Error: ${text}. Return JSON with key "message" as a string.` }
+              })
+            });
+            const errData = await errResp.json();
+            throw new Error(errData.message || text);
+          } catch(e2) {
+            throw new Error(`Service temporarily unavailable. Please try again. Details: ${text}`);
+          }
+        }
+        continue;
+      }
+      const data = await resp.json();
+      const elapsed = Date.now() - start;
+      window.aiTotalTime += elapsed;
+      window.aiTimeByAlias['genericAI'] = (window.aiTimeByAlias['genericAI'] || 0) + elapsed;
+      if (data.input_tokens) window.aiTotalInputTokens += data.input_tokens;
+      if (data.output_tokens) window.aiTotalOutputTokens += data.output_tokens;
+      return data;
+    } catch(e) {
+      if (i === retries - 1) throw e;
+    }
+  }
+}
+
+// Onboarding
+let selectedMobility = null;
+let selectedDuration = null;
+
+function selectMobility(mob) {
+  selectedMobility = mob;
+  document.querySelectorAll('[data-mob]').forEach(b => {
+    b.classList.toggle('border-warm-400', b.dataset.mob === mob);
+    b.classList.toggle('bg-warm-50', b.dataset.mob === mob);
+    b.classList.toggle('border-warm-200', b.dataset.mob !== mob);
+  });
+}
+
+function selectDuration(dur) {
+  selectedDuration = dur;
+  document.querySelectorAll('[data-dur]').forEach(b => {
+    b.classList.toggle('border-warm-400', b.dataset.dur === dur);
+    b.classList.toggle('bg-warm-100', b.dataset.dur === dur);
+    b.classList.toggle('border-warm-200', b.dataset.dur !== dur);
+  });
+}
+
+function completeOnboarding() {
+  const name = document.getElementById('onboard-name').value.trim();
+  if (!name) { alert('Please enter your name 😊'); return; }
+  if (!selectedMobility) { alert('Please select your mobility level'); return; }
+  if (!selectedDuration) { alert('Please select your preferred duration'); return; }
+  
+  state.name = name;
+  state.mobility = selectedMobility;
+  state.preferredDuration = selectedDuration;
+  state.onboarded = true;
+  saveState();
+  
+  showScreen('home');
+  updateHomeScreen();
+}
+
+// Home Screen
+function updateHomeScreen() {
+  const tod = getTimeOfDay();
+  const greetings = {
+    morning: `Good morning, ${state.name}! ☀️`,
+    afternoon: `Good afternoon, ${state.name}! 🌤️`,
+    evening: `Good evening, ${state.name}! 🌅`,
+    night: `Peaceful night, ${state.name}! 🌙`
+  };
+  const subs = {
+    morning: "A gentle practice to start your day.",
+    afternoon: "Take a mindful pause in your day.",
+    evening: "Wind down with a calming moment.",
+    night: "A peaceful practice before rest."
+  };
+  document.getElementById('greeting').textContent = greetings[tod];
+  document.getElementById('greeting-sub').textContent = subs[tod];
+  
+  // Update stats
+  updateStreak();
+  document.getElementById('streak-count').textContent = state.streak;
+  const totalMin = Math.round(state.sessions.reduce((a, s) => a + (s.duration || 0), 0) / 60);
+  document.getElementById('total-minutes').textContent = totalMin;
+  document.getElementById('total-sessions').textContent = state.sessions.length;
+  
+  // Populate practice list
+  populatePracticeList();
+  
+  // Reset mood/energy selection highlights
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('border-warm-400', 'bg-warm-100'));
+  document.querySelectorAll('.energy-btn').forEach(b => b.classList.remove('border-warm-400', 'bg-warm-100'));
+  state.currentMood = null;
+  state.currentEnergy = null;
+  document.getElementById('recommendation-card').classList.add('hidden');
+  document.getElementById('rec-loading').classList.add('hidden');
+}
+
+function setMood(mood) {
+  state.currentMood = mood;
+  document.querySelectorAll('.mood-btn').forEach(b => {
+    const selected = b.dataset.mood === mood;
+    b.classList.toggle('border-warm-400', selected);
+    b.classList.toggle('bg-warm-100', selected);
+  });
+  tryGetRecommendation();
+}
+
+function setEnergy(energy) {
+  state.currentEnergy = energy;
+  document.querySelectorAll('.energy-btn').forEach(b => {
+    const selected = b.dataset.energy === energy;
+    b.classList.toggle('border-warm-400', selected);
+    b.classList.toggle('bg-warm-100', selected);
+  });
+  tryGetRecommendation();
+}
+
+async function tryGetRecommendation() {
+  if (!state.currentMood || !state.currentEnergy) return;
+  
+  document.getElementById('rec-loading').classList.remove('hidden');
+  document.getElementById('recommendation-card').classList.add('hidden');
+  
+  const tod = getTimeOfDay();
+  const recentMoods = state.sessions.slice(-5).map(s => s.preMood).filter(Boolean).join(', ');
+  const recentTypes = state.sessions.slice(-5).map(s => s.type).filter(Boolean).join(', ');
+  
+  const prompt = `You are an expert mindfulness coach for elderly adults. Based on the following context, recommend ONE specific micro-practice.
+
+Context:
+- User name: ${state.name}
+- Current mood: ${state.currentMood}
+- Current energy: ${state.currentEnergy}
+- Mobility: ${state.mobility} (options: seated, wheelchair, bed, mobile)
+- Time of day: ${tod}
+- Preferred duration: ${state.preferredDuration}
+- Recent moods: ${recentMoods || 'none'}
+- Recent practice types: ${recentTypes || 'none'}
+- Total sessions completed: ${state.sessions.length}
+
+Return a JSON object with EXACTLY these keys and types:
+{
+  "title": string (short name of the practice, max 6 words),
+  "description": string (1-2 sentences explaining what this practice does and why it's good for them right now, warm and encouraging tone),
+  "type": string (one of: "breathing", "body_scan", "gratitude", "visualization", "gentle_movement", "loving_kindness", "sensory_awareness"),
+  "duration_seconds": number (between 30 and 300, appropriate for their energy level),
+  "position": string (one of: "seated", "lying_down", "any" - must be compatible with their mobility),
+  "instructions": array of strings (4-8 step-by-step instructions, each 1-2 sentences, gentle and clear language for elderly adults, include timing cues like "for the next 30 seconds"),
+  "breathing_pattern": string or null (if breathing practice, format like "4-4" for inhale-exhale seconds, or "4-7-8" for inhale-hold-exhale, null if not a breathing practice)
+}`;
+
+  try {
+    const data = await callAI(prompt);
+    recommendedPractice = data;
+    
+    document.getElementById('rec-title').textContent = data.title;
+    document.getElementById('rec-desc').textContent = data.description;
+    document.getElementById('rec-duration').textContent = formatTime(data.duration_seconds);
+    const posMap = { seated: '🪑 Seated', lying_down: '🛏️ Lying Down', any: '✨ Any Position' };
+    document.getElementById('rec-position').textContent = posMap[data.position] || data.position;
+    
+    document.getElementById('rec-loading').classList.add('hidden');
+    document.getElementById('recommendation-card').classList.remove('hidden');
+  } catch(e) {
+    document.getElementById('rec-loading').classList.add('hidden');
+    console.error('AI recommendation error:', e);
+    // Fall back to a default practice
+    recommendedPractice = getDefaultPractice();
+    document.getElementById('rec-title').textContent = recommendedPractice.title;
+    document.getElementById('rec-desc').textContent = recommendedPractice.description;
+    document.getElementById('rec-duration').textContent = formatTime(recommendedPractice.duration_seconds);
+    document.getElementById('rec-position').textContent = '✨ Any Position';
+    document.getElementById('recommendation-card').classList.remove('hidden');
+  }
+}
+
+function getDefaultPractice() {
+  const defaults = [
+    {
+      title: "Gentle Breath Awareness",
+      description: "Simply notice your natural breathing rhythm. No need to change anything — just observe.",
+      type: "breathing",
+      duration_seconds: 60,
+      position: "any",
+      instructions: [
+        "Close your eyes gently, or soften your gaze downward.",
+        "Notice the air entering through your nose. Feel its coolness.",
+        "Follow the breath as it fills your chest and belly.",
+        "Now notice the air leaving. Feel the gentle release.",
+        "If your mind wanders, that's perfectly okay. Just come back to the breath.",
+        "Continue breathing naturally for the remaining time."
+      ],
+      breathing_pattern: null
+    },
+    {
+      title: "Gratitude Moment",
+      description: "A brief pause to appreciate something simple and beautiful in your life right now.",
+      type: "gratitude",
+      duration_seconds: 60,
+      position: "any",
+      instructions: [
+        "Take a slow, deep breath and settle in.",
+        "Think of one thing you're grateful for today. It can be very simple.",
+        "Picture it clearly in your mind. Notice how it makes you feel.",
+        "Let a gentle smile form on your face.",
+        "Breathe in that feeling of gratitude. Let it warm your heart.",
+        "Carry this feeling with you into the rest of your day."
+      ],
+      breathing_pattern: null
+    },
+    {
+      title: "Hand Relaxation",
+      description: "Gently release tension from your hands — a wonderful way to calm the whole body.",
+      type: "body_scan",
+      duration_seconds: 90,
+      position: "any",
+      instructions: [
+        "Rest your hands comfortably in your lap or at your sides.",
+        "Take a deep breath in, and let it out slowly.",
+        "Bring your attention to your right hand. Notice any sensations.",
+        "Slowly curl your fingers into a gentle fist, then release them.",
+        "Now do the same with your left hand. Curl gently, then release.",
+        "Feel the warmth and relaxation flowing through both hands.",
+        "Let this relaxation spread up through your arms and shoulders."
+      ],
+      breathing_pattern: null
+    }
+  ];
+  return defaults[Math.floor(Math.random() * defaults.length)];
+}
+
+// Practice List
+const practiceTemplates = [
+  { title: "Deep Breathing", emoji: "🌬️", type: "breathing", desc: "Calm your body with gentle breaths" },
+  { title: "Body Scan", emoji: "🫧", type: "body_scan", desc: "Notice and release tension gently" },
+  { title: "Gratitude Pause", emoji: "🙏", type: "gratitude", desc: "Appreciate a small blessing" },
+  { title: "Peaceful Visualization", emoji: "🌅", type: "visualization", desc: "Imagine a calm, beautiful place" },
+  { title: "Gentle Hand Movement", emoji: "🤲", type: "gentle_movement", desc: "Soft movements to ground yourself" },
+  { title: "Loving Kindness", emoji: "💛", type: "loving_kindness", desc: "Send warmth to yourself and others" },
+  { title: "Sound Awareness", emoji: "👂", type: "sensory_awareness", desc: "Listen to the world around you" }
+];
+
+function populatePracticeList() {
+  const container = document.getElementById('practice-list');
+  container.innerHTML = practiceTemplates.map(p => `
+    <button onclick="startBrowsePractice('${p.type}')" class="practice-option card px-4 py-4 w-full text-left flex items-center gap-3 hover:shadow-md border border-transparent hover:border-warm-200 transition-all">
+      <span class="text-3xl">${p.emoji}</span>
+      <div class="flex-1">
+        <p class="font-semibold text-warm-700 text-lg">${p.title}</p>
+        <p class="text-warm-400 text-sm">${p.desc}</p>
+      </div>
+      <span class="text-warm-300 text-xl">›</span>
+    </button>
+  `).join('');
+}
+
+async function startBrowsePractice(type) {
+  document.getElementById('rec-loading').classList.remove('hidden');
+  showScreen('home');
+  window.scrollTo(0, 0);
+  
+  const tod = getTimeOfDay();
+  const dur = state.preferredDuration === 'auto' ? '2min' : state.preferredDuration;
+  const durSec = getDurationSeconds(dur);
+  
+  const prompt = `You are an expert mindfulness coach for elderly adults. Generate a specific ${type.replace('_', ' ')} micro-practice.
+
+Context:
+- User mobility: ${state.mobility}
+- Duration: ${durSec} seconds
+- Time of day: ${tod}
+- Mood: ${state.currentMood || 'unknown'}
+- Energy: ${state.currentEnergy || 'medium'}
+
+Return a JSON object with EXACTLY these keys and types:
+{
+  "title": string (short name, max 6 words),
+  "description": string (1-2 warm encouraging sentences),
+  "type": "${type}",
+  "duration_seconds": ${durSec},
+  "position": string (one of: "seated", "lying_down", "any" - must work with ${state.mobility} mobility),
+  "instructions": array of strings (4-8 steps, gentle clear language for elderly adults),
+  "breathing_pattern": string or null (e.g. "4-4" or "4-7-8" for breathing, null otherwise)
+}`;
+
+  try {
+    const data = await callAI(prompt);
+    recommendedPractice = data;
+    startPracticeSession(data);
+  } catch(e) {
+    const fallback = getDefaultPractice();
+    fallback.type = type;
+    recommendedPractice = fallback;
+    startPracticeSession(fallback);
+  }
+  document.getElementById('rec-loading').classList.add('hidden');
+}
+
+function startRecommendedPractice() {
+  if (recommendedPractice) {
+    startPracticeSession(recommendedPractice);
+  }
+}
+
+// Practice Session
+function startPracticeSession(practice) {
+  currentPractice = practice;
+  practiceInstructions = practice.instructions || [];
+  currentInstructionIndex = 0;
+  timerTotal = practice.duration_seconds || 120;
+  timerSeconds = 0;
+  isPaused = false;
+  
+  document.getElementById('practice-title').textContent = practice.title;
+  const posMap = { seated: '🪑 Seated', lying_down: '🛏️ Lying Down', any: '✨ Any Position' };
+  document.getElementById('practice-position-badge').textContent = posMap[practice.position] || '✨ Any Position';
+  
+  showScreen('practice');
+  
+  // Start breathing visual if applicable
+  if (practice.breathing_pattern) {
+    document.getElementById('breath-visual').classList.remove('hidden');
+    startBreathingGuide(practice.breathing_pattern);
+  } else {
+    document.getElementById('breath-visual').classList.add('hidden');
+  }
+  
+  updateTimerDisplay();
+  showInstruction();
+  
+  document.getElementById('btn-pause').textContent = '⏸️';
+  
+  timerInterval = setInterval(() => {
+    if (!isPaused) {
+      timerSeconds++;
+      updateTimerDisplay();
+      
+      // Advance instructions at intervals
+      if (practiceInstructions.length > 0) {
+        const interval = Math.floor(timerTotal / practiceInstructions.length);
+        if (timerSeconds % interval === 0 && currentInstructionIndex < practiceInstructions.length - 1) {
+          currentInstructionIndex++;
+          showInstruction();
+        }
+      }
+      
+      if (timerSeconds >= timerTotal) {
+        completePractice();
+      }
+    }
+  }, 1000);
+  
+  // Voice guidance
+  if (state.voiceEnabled && practiceInstructions.length > 0) {
+    speak(practiceInstructions[0]);
+  }
+}
+
+function updateTimerDisplay() {
+  const remaining = Math.max(0, timerTotal - timerSeconds);
+  document.getElementById('timer-display').textContent = formatTime(remaining);
+  
+  const progress = timerSeconds / timerTotal;
+  const circumference = 2 * Math.PI * 90;
+  document.getElementById('timer-progress').setAttribute('stroke-dashoffset', circumference * (1 - progress));
+  
+  const pct = Math.round(progress * 100);
+  document.getElementById('timer-phase').textContent = pct < 100 ? `${pct}% complete` : 'Complete!';
+}
+
+function showInstruction() {
+  if (practiceInstructions[currentInstructionIndex]) {
+    const el = document.getElementById('practice-instruction');
+    el.style.opacity = 0;
+    setTimeout(() => {
+      el.textContent = practiceInstructions[currentInstructionIndex];
+      el.style.opacity = 1;
+    }, 300);
+    
+    if (state.voiceEnabled) {
+      speak(practiceInstructions[currentInstructionIndex]);
+    }
+  }
+}
+
+function startBreathingGuide(pattern) {
+  const parts = pattern.split('-').map(Number);
+  const inhale = parts[0] || 4;
+  const hold = parts.length === 3 ? parts[1] : 0;
+  const exhale = parts.length === 3 ? parts[2] : (parts[1] || 4);
+  
+  const circle = document.getElementById('breath-circle');
+  const text = document.getElementById('breath-text');
+  
+  let phase = 'inhale';
+  
+  function cycle() {
+    // Inhale
+    phase = 'inhale';
+    text.textContent = 'Breathe In';
+    circle.style.width = '140px';
+    circle.style.height = '140px';
+    circle.style.background = 'rgba(125, 180, 117, 0.3)';
+    
+    setTimeout(() => {
+      if (hold > 0) {
+        phase = 'hold';
+        text.textContent = 'Hold';
+        circle.style.background = 'rgba(184, 216, 232, 0.4)';
+        
+        setTimeout(() => {
+          phase = 'exhale';
+          text.textContent = 'Breathe Out';
+          circle.style.width = '96px';
+          circle.style.height = '96px';
+          circle.style.background = 'rgba(212, 165, 116, 0.3)';
+        }, hold * 1000);
+      } else {
+        phase = 'exhale';
+        text.textContent = 'Breathe Out';
+        circle.style.width = '96px';
+        circle.style.height = '96px';
+        circle.style.background = 'rgba(212, 165, 116, 0.3)';
+      }
+    }, inhale * 1000);
+  }
+  
+  cycle();
+  breathInterval = setInterval(cycle, (inhale + hold + exhale) * 1000);
+}
+
+function togglePause() {
+  isPaused = !isPaused;
+  document.getElementById('btn-pause').textContent = isPaused ? '▶️' : '⏸️';
+  if (isPaused) {
+    document.getElementById('timer-phase').textContent = 'Paused';
+  }
+}
+
+function confirmEndPractice() {
+  if (timerSeconds > 5) {
+    if (confirm('End this practice early? Your progress will still be saved. 🌿')) {
+      endPractice();
+    }
+  } else {
+    endPractice();
+  }
+}
+
+function endPractice() {
+  clearInterval(timerInterval);
+  clearInterval(breathInterval);
+  timerInterval = null;
+  breathInterval = null;
+  window.speechSynthesis.cancel();
+  
+  if (timerSeconds >= 10) {
+    // Save session
+    const session = {
+      date: new Date().toISOString(),
+      type: currentPractice?.type || 'unknown',
+      title: currentPractice?.title || 'Practice',
+      duration: timerSeconds,
+      preMood: state.currentMood,
+      preEnergy: state.currentEnergy,
+      postMood: null,
+      completed: timerSeconds >= timerTotal
+    };
+    state.sessions.push(session);
+    updateStreak();
+    saveState();
+    
+    showScreen('complete');
+    showCompletionScreen(session);
+  } else {
+    showScreen('home');
+    updateHomeScreen();
+  }
+}
+
+function completePractice() {
+  clearInterval(timerInterval);
+  clearInterval(breathInterval);
+  timerInterval = null;
+  breathInterval = null;
+  window.speechSynthesis.cancel();
+  
+  if (state.voiceEnabled) {
+    speak("Beautiful. You've completed your practice. Well done.");
+  }
+  
+  const session = {
+    date: new Date().toISOString(),
+    type: currentPractice?.type || 'unknown',
+    title: currentPractice?.title || 'Practice',
+    duration: timerSeconds,
+    preMood: state.currentMood,
+    preEnergy: state.currentEnergy,
+    postMood: null,
+    completed: true
+  };
+  state.sessions.push(session);
+  updateStreak();
+  saveState();
+  
+  showScreen('complete');
+  showCompletionScreen(session);
+  
+  // Confetti!
+  try {
+    confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 }, colors: ['#8B6F47', '#A0845C', '#7DB375', '#5A9CB8'] });
+  } catch(e) {}
+}
+
+function showCompletionScreen(session) {
+  document.getElementById('complete-duration').textContent = formatTime(session.duration);
+  const typeNames = { breathing: 'Breathing', body_scan: 'Body Scan', gratitude: 'Gratitude', visualization: 'Visual', gentle_movement: 'Movement', loving_kindness: 'Kindness', sensory_awareness: 'Sensory' };
+  document.getElementById('complete-type').textContent = typeNames[session.type] || session.type;
+  document.getElementById('complete-name').textContent = `${state.name}, you took ${formatTime(session.duration)} for yourself today.`;
+  
+  document.querySelectorAll('.post-mood-btn').forEach(b => b.classList.remove('border-warm-400', 'bg-warm-100'));
+  document.getElementById('ai-reflection').classList.add('hidden');
+}
+
+async function setPostMood(mood) {
+  document.querySelectorAll('.post-mood-btn').forEach(b => {
+    const selected = b.dataset.pm === mood;
+    b.classList.toggle('border-warm-400', selected);
+    b.classList.toggle('bg-warm-100', selected);
+  });
+  
+  // Update last session
+  if (state.sessions.length > 0) {
+    state.sessions[state.sessions.length - 1].postMood = mood;
+    saveState();
+  }
+  
+  // Get AI reflection
+  try {
+    const data = await callAI(`You are a warm, compassionate mindfulness coach for an elderly person named ${state.name}. They just completed a ${currentPractice?.title || 'mindfulness'} practice lasting ${formatTime(timerSeconds)}. Their mood before was "${state.currentMood}" and after is "${mood}". Their energy was "${state.currentEnergy}". Write a brief, warm, encouraging reflection (2-3 sentences max). Be genuine and kind, like a caring friend. Return JSON with key "reflection" as a string.`);
+    
+    document.getElementById('ai-reflection-text').textContent = data.reflection;
+    document.getElementById('ai-reflection').classList.remove('hidden');
+  } catch(e) {
+    const reflections = [
+      `Every moment of stillness is a gift to yourself, ${state.name}. You're building a beautiful habit. 🌸`,
+      `How wonderful that you took this time, ${state.name}. Your mind and body thank you. 💛`,
+      `${state.name}, even the smallest practice makes a difference. You're doing beautifully. 🌿`
+    ];
+    document.getElementById('ai-reflection-text').textContent = reflections[Math.floor(Math.random() * reflections.length)];
+    document.getElementById('ai-reflection').classList.remove('hidden');
+  }
+}
+
+// Chat
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  
+  input.value = '';
+  const container = document.getElementById('chat-messages');
+  
+  // Add user message
+  container.innerHTML += `
+    <div class="flex gap-2 justify-end fade-in">
+      <div class="bg-warm-500 text-white rounded-2xl rounded-tr-md px-4 py-3 max-w-[85%]">
+        <p class="text-base">${escapeHtml(msg)}</p>
+      </div>
+    </div>
+  `;
+  
+  // Add typing indicator
+  container.innerHTML += `
+    <div id="typing-indicator" class="flex gap-2 fade-in">
+      <span class="text-2xl flex-shrink-0">🧘</span>
+      <div class="bg-warm-100 rounded-2xl rounded-tl-md px-4 py-3">
+        <p class="text-warm-400 animate-pulse">Thinking...</p>
+      </div>
+    </div>
+  `;
+  container.scrollTop = container.scrollHeight;
+  
+  // Build context
+  const recentChat = state.chatHistory.slice(-6).map(c => `${c.role}: ${c.content}`).join('\n');
+  
+  const prompt = `You are a warm, compassionate mindfulness and wellness coach named "Coach" for elderly adults in assisted living. The user is ${state.name}, with ${state.mobility} mobility. Be kind, patient, use simple language, and keep responses concise (2-4 sentences). Use encouraging emojis sparingly. Focus on mindfulness, breathing, relaxation, gratitude, gentle movement, and emotional wellness. If they ask medical questions, gently remind them to consult their doctor.
+
+Recent conversation:
+${recentChat}
+
+User says: "${msg}"
+
+Return JSON with key "response" as a string.`;
+
+  try {
+    const data = await callAI(prompt);
+    const response = data.response;
+    
+    state.chatHistory.push({ role: 'user', content: msg });
+    state.chatHistory.push({ role: 'coach', content: response });
+    if (state.chatHistory.length > 20) state.chatHistory = state.chatHistory.slice(-20);
+    saveState();
+    
+    // Remove typing indicator and add response
+    const typing = document.getElementById('typing-indicator');
+    if (typing) typing.remove();
+    
+    container.innerHTML += `
+      <div class="flex gap-2 fade-in">
+        <span class="text-2xl flex-shrink-0">🧘</span>
+        <div class="bg-warm-100 rounded-2xl rounded-tl-md px-4 py-3 max-w-[85%]">
+          <p class="text-warm-700 text-base">${escapeHtml(response)}</p>
+        </div>
+      </div>
+    `;
+    
+    if (state.voiceEnabled) {
+      speak(response);
+    }
+  } catch(e) {
+    const typing = document.getElementById('typing-indicator');
+    if (typing) typing.remove();
+    
+    container.innerHTML += `
+      <div class="flex gap-2 fade-in">
+        <span class="text-2xl flex-shrink-0">🧘</span>
+        <div class="bg-warm-100 rounded-2xl rounded-tl-md px-4 py-3 max-w-[85%]">
+          <p class="text-warm-700 text-base">I'm having a little trouble connecting right now. That's okay — let's take a deep breath together. Try again in a moment. 💛</p>
+        </div>
+      </div>
+    `;
+  }
+  
+  container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Voice
+function speak(text) {
+  if (!state.voiceEnabled || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 0.85;
+  utter.pitch = 1.0;
+  utter.volume = 0.9;
+  
+  // Try to get a good voice
+  const voices = window.speechSynthesis.getVoices();
+  const preferred = voices.find(v => v.name.includes('Samantha') || v.name.includes('Karen') || v.name.includes('Google UK English Female') || (v.lang.startsWith('en') && v.name.includes('Female')));
+  if (preferred) utter.voice = preferred;
+  
+  window.speechSynthesis.speak(utter);
+}
+
+// Stats
+function updateStreak() {
+  if (state.sessions.length === 0) { state.streak = 0; return; }
+  
+  const today = new Date().toDateString();
+  const dates = [...new Set(state.sessions.map(s => new Date(s.date).toDateString()))].sort((a, b) => new Date(b) - new Date(a));
+  
+  let streak = 0;
+  let checkDate = new Date();
+  
+  for (let i = 0; i < 365; i++) {
+    const dateStr = checkDate.toDateString();
+    if (dates.includes(dateStr)) {
+      streak++;
+      checkDate.setDate(checkDate.getDate() - 1);
+    } else if (i === 0) {
+      // Today hasn't been practiced yet, check from yesterday
+      checkDate.setDate(checkDate.getDate() - 1);
+      continue;
+    } else {
+      break;
+    }
+  }
+  
+  state.streak = streak;
+  if (streak > state.longestStreak) state.longestStreak = streak;
+  state.lastPracticeDate = dates[0] || null;
+}
+
+function updateStats() {
+  const totalMin = Math.round(state.sessions.reduce((a, s) => a + (s.duration || 0), 0) / 60);
+  document.getElementById('stat-total-sessions').textContent = state.sessions.length;
+  document.getElementById('stat-total-minutes').textContent = totalMin;
+  document.getElementById('stat-streak').textContent = `${state.streak} days`;
+  document.getElementById('stat-longest-streak').textContent = `${state.longestStreak} days`;
+  
+  // Most common mood
+  const moods = state.sessions.map(s => s.preMood).filter(Boolean);
+  if (moods.length > 0) {
+    const freq = {};
+    moods.forEach(m => freq[m] = (freq[m] || 0) + 1);
+    const top = Object.entries(freq).sort((a, b) => b[1] - a[1])[0][0];
+    const moodEmoji = { anxious: '😟', tired: '😴', okay: '😐', good: '😊', great: '🥰' };
+    document.getElementById('stat-common-mood').textContent = `${moodEmoji[top] || ''} ${top}`;
+  }
+  
+  // Week chart
+  const weekChart = document.getElementById('week-chart');
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const today = new Date();
+  const dayOfWeek = (today.getDay() + 6) % 7; // Mon=0
+  
+  const weekData = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (dayOfWeek - i));
+    const dateStr = d.toDateString();
+    const daySessions = state.sessions.filter(s => new Date(s.date).toDateString() === dateStr);
+    const mins = Math.round(daySessions.reduce((a, s) => a + (s.duration || 0), 0) / 60);
+    weekData.push({ day: dayNames[i], mins, sessions: daySessions.length, isToday: d.toDateString() === today.toDateString() });
+  }
+  
+  const maxMins = Math.max(...weekData.map(d => d.mins), 1);
+  weekChart.innerHTML = weekData.map(d => {
+    const h = Math.max(8, (d.mins / maxMins) * 100);
+    const color = d.isToday ? 'bg-warm-500' : (d.mins > 0 ? 'bg-sage-300' : 'bg-warm-200');
+    return `<div class="flex-1 flex flex-col items-center justify-end">
+      <span class="text-xs text-warm-500 mb-1">${d.mins > 0 ? d.mins + 'm' : ''}</span>
+      <div class="${color} rounded-t-md w-full" style="height:${h}%"></div>
+    </div>`;
+  }).join('');
+  
+  // Recent sessions
+  const recentContainer = document.getElementById('recent-sessions');
+  const recent = state.sessions.slice(-10).reverse();
+  if (recent.length === 0) {
+    recentContainer.innerHTML = '<p class="text-warm-400 text-sm">No sessions yet. Start your first practice! 🌱</p>';
+  } else {
+    recentContainer.innerHTML = recent.map(s => {
+      const d = new Date(s.date);
+      const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const typeEmoji = { breathing: '🌬️', body_scan: '🫧', gratitude: '🙏', visualization: '🌅', gentle_movement: '🤲', loving_kindness: '💛', sensory_awareness: '👂' };
+      return `<div class="flex items-center justify-between py-2 border-b border-warm-100">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">${typeEmoji[s.type] || '🧘'}</span>
+          <div>
+            <p class="font-medium text-warm-700 text-sm">${s.title || s.type}</p>
+            <p class="text-warm-400 text-xs">${dateStr} at ${timeStr}</p>
+          </div>
+        </div>
+        <span class="text-warm-500 text-sm font-medium">${formatTime(s.duration)}</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+// Settings
+function loadSettings() {
+  document.getElementById('settings-name').value = state.name;
+  document.getElementById('settings-mobility').value = state.mobility;
+  document.getElementById('settings-duration').value = state.preferredDuration;
+  updateVoiceToggle();
+  updateTextSizeButtons();
+}
+
+function saveSettings() {
+  state.name = document.getElementById('settings-name').value.trim() || state.name;
+  state.mobility = document.getElementById('settings-mobility').value;
+  state.preferredDuration = document.getElementById('settings-duration').value;
+  saveState();
+}
+
+function toggleVoice() {
+  state.voiceEnabled = !state.voiceEnabled;
+  updateVoiceToggle();
+  saveState();
+}
+
+function updateVoiceToggle() {
+  const toggle = document.getElementById('voice-toggle');
+  const knob = document.getElementById('voice-toggle-knob');
+  const label = document.getElementById('voice-label');
+  if (state.voiceEnabled) {
+    toggle.classList.remove('bg-warm-200');
+    toggle.classList.add('bg-sage-300');
+    knob.style.left = '28px';
+    label.textContent = 'On';
+  } else {
+    toggle.classList.add('bg-warm-200');
+    toggle.classList.remove('bg-sage-300');
+    knob.style.left = '4px';
+    label.textContent = 'Off';
+  }
+}
+
+function setTextSize(size) {
+  state.textSize = size;
+  const sizeMap = { normal: '16px', large: '18px', xlarge: '22px' };
+  document.body.style.fontSize = sizeMap[size];
+  updateTextSizeButtons();
+  saveState();
+}
+
+function updateTextSizeButtons() {
+  ['normal', 'large', 'xlarge'].forEach(s => {
+    const btn = document.getElementById(`ts-${s}`);
+    if (btn) {
+      btn.classList.toggle('border-warm-400', s === state.textSize);
+      btn.classList.toggle('bg-warm-100', s === state.textSize);
+    }
+  });
+}
+
+function resetApp() {
+  if (confirm('This will erase all your data and progress. Are you sure?')) {
+    localStorage.removeItem('micropractice_state');
+    location.reload();
+  }
+}
+
+// Init
+(function init() {
+  loadState();
+  
+  // Apply text size
+  if (state.textSize) {
+    const sizeMap = { normal: '16px', large: '18px', xlarge: '22px' };
+    document.body.style.fontSize = sizeMap[state.textSize] || '16px';
+  }
+  
+  // Load voices
+  if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  }
+  
+  if (state.onboarded) {
+    showScreen('home');
+    updateHomeScreen();
+  } else {
+    showScreen('onboarding');
+  }
+})();
+</script>
+
+</body>
+</html>
